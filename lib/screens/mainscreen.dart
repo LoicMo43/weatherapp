@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-// import 'dart:html';
 
 import 'package:Weather/providers/haspermissionprovider.dart';
 import 'package:Weather/providers/isloadingprovider.dart';
@@ -9,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geolocator/geolocator.dart' as geolocator;
 import 'package:http/http.dart' as http;
-// import 'package:location/location.dart' as locations;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:weather_icons/weather_icons.dart';
@@ -72,7 +70,21 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       ]);
     } else {
       var data = await Geolocator.isLocationServiceEnabled();
-      locationservicestatus = data;
+
+        locationservicestatus = data;
+
+      Geolocator.getServiceStatusStream().listen((event) {
+        if (event == geolocator.ServiceStatus.enabled) {
+
+            locationservicestatus = true;
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Localisation activé !')));
+
+        } else {
+            locationservicestatus = false;
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Activé votre localisation!')));
+        }
+      });
+
       if (locationservicestatus) {
         await getLocation();
       } else {
@@ -80,19 +92,19 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           context: context,
           builder: (context) {
             return AlertDialog(
-              content: Text('Enable GPS'),
+              content: Text('Avtiver GPS'),
               actions: [
                 ElevatedButton(
                     onPressed: () {
                       Navigator.of(context).pop();
                     },
-                    child: Text('Cancel')),
+                    child: Text('Retour')),
                 ElevatedButton(
                     onPressed: () async {
                       await Geolocator.openLocationSettings();
                       Navigator.of(context).pop();
                     },
-                    child: Text('OK'))
+                    child: Text('Valider'))
               ],
             );
           },
@@ -136,14 +148,14 @@ print(position.longitude);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Manually Enable location'),
-        content: Text('Thank You'),
+        title: Text('Avtiver manuellement la localisation'),
+        content: Text('Merci'),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
             },
-            child: Text('OK'),
+            child: Text('Valider'),
           ),
         ],
       ),
@@ -330,42 +342,42 @@ print(position.longitude);
     switch (date.weekday) {
       case 1:
         return Text(
-          'Monday',
+          'Lundi',
           style: TextStyle(fontWeight: FontWeight.bold),
         );
       case 2:
         return Text(
-          'Tuesday',
+          'Mardi',
           style: TextStyle(fontWeight: FontWeight.bold),
         );
       case 3:
         return Text(
-          'Wednesday',
+          'Mercredi',
           style: TextStyle(fontWeight: FontWeight.bold),
         );
       case 4:
         return Text(
-          'Thursday',
+          'Jeudi',
           style: TextStyle(fontWeight: FontWeight.bold),
         );
       case 5:
         return Text(
-          'Friday',
+          'Vendredi',
           style: TextStyle(fontWeight: FontWeight.bold),
         );
       case 6:
         return Text(
-          'Saturday',
+          'Samedi',
           style: TextStyle(fontWeight: FontWeight.bold),
         );
       case 7:
         return Text(
-          'Sunday',
+          'Dimanche',
           style: TextStyle(fontWeight: FontWeight.bold),
         );
       default:
         return Text(
-          'Unknown',
+          'Invalide',
           style: TextStyle(fontWeight: FontWeight.bold),
         );
     }
@@ -377,27 +389,9 @@ print(position.longitude);
   }
 
   String getFormattedHour(int hour, [int min = 0]) {
-    if (isOneDigit(min)) {
-      if (hour == 0) {
-        return '12:0$min AM';
-      } else if (hour < 12) {
-        return '${hour.toString().padLeft(2, '0')}:0$min AM';
-      } else if (hour == 12) {
-        return '12:$min PM';
-      } else {
-        return '${(hour - 12).toString().padLeft(2, '0')}:0$min PM';
-      }
-    } else {
-      if (hour == 0) {
-        return '12:$min AM';
-      } else if (hour < 12) {
-        return '${hour.toString().padLeft(2, '0')}:$min AM';
-      } else if (hour == 12) {
-        return '12:$min PM';
-      } else {
-        return '${(hour - 12).toString().padLeft(2, '0')}:$min PM';
-      }
-    }
+    String twoDigitHour = hour.toString().padLeft(2, '0');
+    String twoDigitMin = min.toString().padLeft(2, '0');
+    return '$twoDigitHour:$twoDigitMin';
   }
 
   @override
@@ -409,7 +403,7 @@ print(position.longitude);
       child: Scaffold(
         appBar: AppBar(automaticallyImplyLeading :false,
             title:
-                Text('Weather', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text('Météo', style: TextStyle(fontWeight: FontWeight.bold)),
             actions: [
               IconButton(
                 icon: Icon(Icons.search),
@@ -433,9 +427,7 @@ print(position.longitude);
           builder: (context,hasPermission,child) {
             return hasPermission.hasPermission==false?Center(child: Column(mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('Please Enable your permissions',),
-                Text('Or',style: TextStyle(color: Colors.orangeAccent[200]),),
-                Text('Search Your Area',),
+                Text('Rechercher une localisation',),
               ],
             )): Consumer<isLoadingProvider>(
                 builder: (context,isLoading,child) {
@@ -482,7 +474,7 @@ print(position.longitude);
                             children: [
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                                child: Text('Hourly Weather',
+                                child: Text('Météo par heure',
                                     style: TextStyle(
                                         fontSize: 20, fontWeight: FontWeight.bold)),
                               ),
@@ -547,7 +539,7 @@ print(position.longitude);
                             children: [
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                                child: Text('Daily Weather',
+                                child: Text('Météo par jour',
                                     style: TextStyle(
                                         fontSize: 20, fontWeight: FontWeight.bold)),
                               ),
@@ -703,7 +695,7 @@ print(position.longitude);
                             children: [
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                                child: Text('Details',
+                                child: Text('Détails',
                                     style: TextStyle(
                                         fontSize: 20, fontWeight: FontWeight.bold)),
                               ),
@@ -720,7 +712,7 @@ print(position.longitude);
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Text('WindSpeed:' +
+                                          Text('Vitesse du vent:' +
                                               currentWeather.currentWeather!.windspeed
                                                   .toString() +
                                               ' Km/h'),
@@ -729,7 +721,7 @@ print(position.longitude);
                                           ),
                                           Row(
                                             children: [
-                                              Text('Day/Night:'),
+                                              Text('Jour / Nuit :'),
                                               currentWeather.currentWeather!.isDay == 1
                                                   ? Icon(WeatherIcons.day_sunny)
                                                   : Icon(WeatherIcons.night_clear)
@@ -823,7 +815,7 @@ SearchDelegateBar(BuildContext context1){
           return Center(child: CircularProgressIndicator());
         } else if (snapshot.hasError) {
           // Show an error message if there was an error fetching the results
-          return Text('Error: ${snapshot.error}');
+          return Text('Erreur: ${snapshot.error}');
         } else {
           // The results have been fetched, so build the suggestions
           List<String> locations = snapshot.data!.locations;
@@ -862,7 +854,7 @@ SearchDelegateBar(BuildContext context1){
             );
           } else {
             // If locations is empty, return a message
-            return Center(child: Text('Not found'));
+            return Center(child: Text('Non trouvé'));
           }
         }
       },
@@ -882,7 +874,7 @@ SearchDelegateBar(BuildContext context1){
           return Center(child: CircularProgressIndicator());
         } else if (snapshot.hasError) {
           // Show an error message if there was an error fetching the results
-          return Text('Error: ${snapshot.error}');
+          return Text('Erreur: ${snapshot.error}');
         } else {
           // The results have been fetched, so build the suggestions
           List<String> locations = snapshot.data!.locations;
@@ -921,7 +913,7 @@ SearchDelegateBar(BuildContext context1){
             );
           } else {
             // If locations is empty, return a message
-            return Center(child: Text('Not found'));
+            return Center(child: Text('Non trouvé'));
           }
         }
       },
