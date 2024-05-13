@@ -28,6 +28,7 @@ class SearchedLocationScreen extends StatefulWidget {
 }
 
 class _SearchedLocationScreenState extends State<SearchedLocationScreen> {
+  bool isCelsius = true;
   // bool isLoading = false;
   int adjustHourlyByCurrentTime = 0;
   @override
@@ -66,8 +67,8 @@ class _SearchedLocationScreenState extends State<SearchedLocationScreen> {
             dailyWeather;
       } else {
         print('erreur');
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Erreur de chargement de données')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erreur de chargement de données')));
       }
     } catch (e) {
       print('err' + e.toString());
@@ -243,7 +244,7 @@ class _SearchedLocationScreenState extends State<SearchedLocationScreen> {
         );
       case 7:
         return Text(
-          'D',
+          'Dimanche',
           style: TextStyle(fontWeight: FontWeight.bold),
         );
       default:
@@ -268,23 +269,30 @@ class _SearchedLocationScreenState extends State<SearchedLocationScreen> {
   @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
-    // var hourly = Provider.of<HourlyWeatherProvider>(context);
-    // var daily = Provider.of<DailyWeatherProvider>(context);
-    // var currentWeather = Provider.of<CurrentWeatherProvider>(context);
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
-            automaticallyImplyLeading: false,
-            leading: IconButton(
-              icon: Icon(Icons.arrow_back_outlined),
+          automaticallyImplyLeading: false,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_outlined),
+            onPressed: () {
+              Navigator.pushReplacement(context,
+                  MaterialPageRoute(builder: (context) => MainScreen()));
+            },
+          ),
+          title: Text('Météo', style: TextStyle(fontWeight: FontWeight.bold)),
+          actions: [
+            IconButton(
+              icon: Text(isCelsius ? '°C' : '°F'),
               onPressed: () {
-                Navigator.pushReplacement(context,
-                    MaterialPageRoute(builder: (context) => MainScreen()));
+                setState(() {
+                  isCelsius = !isCelsius;
+                });
               },
             ),
-            title:
-                Text('Météo', style: TextStyle(fontWeight: FontWeight.bold)),
-            backgroundColor: Colors.orangeAccent[200]),
+          ],
+          backgroundColor: Colors.lightBlueAccent[200],
+        ),
         body: Consumer<isLoadingProvider>(builder: (context, isLoading, child) {
           return isLoading.isLoading == true
               ? Center(child: const CircularProgressIndicator())
@@ -303,14 +311,17 @@ class _SearchedLocationScreenState extends State<SearchedLocationScreen> {
                       ),
                     ),
                     Consumer<CurrentWeatherProvider>(
-                        builder: (context, currentWeather, child) {
-                      return Text(
-                          currentWeather.currentWeather!.temperature
-                                  .toString() +
-                              ' \u00B0C',
-                          style: TextStyle(
-                              fontSize: 30, fontWeight: FontWeight.bold));
-                    }),
+                      builder: (context, currentWeather, child) {
+                        double temperature = currentWeather.currentWeather!.temperature!.toDouble();
+                        if (!isCelsius) {
+                          temperature = temperature * 9 / 5 + 32;
+                        }
+                        return Text(
+                          temperature.toStringAsFixed(1) + ' \u00B0' + (isCelsius ? 'C' : 'F'),
+                          style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+                        );
+                      },
+                    ),
                     Consumer<CurrentWeatherProvider>(
                         builder: (context, currentWeather, child) {
                       return getWeatherIcon(
@@ -324,11 +335,21 @@ class _SearchedLocationScreenState extends State<SearchedLocationScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                          child: Text('Météo horaire',
-                              style: TextStyle(
-                                  fontSize: 20, fontWeight: FontWeight.bold)),
+                        Text(
+                          'Météo actuelle -',
+                          style: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(
+                            width: 2), // Add some spacing between the texts
+                        Text(
+                          DateTime.now().day.toString() +
+                              '/' +
+                              DateTime.now().month.toString() +
+                              '/' +
+                              DateTime.now().year.toString(),
+                          style: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -355,12 +376,12 @@ class _SearchedLocationScreenState extends State<SearchedLocationScreen> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.center,
                                         children: [
-                                          Text(hourly
-                                                  .hourlyWeather!
-                                                  .temperature2m![index +
-                                                      adjustHourlyByCurrentTime]
-                                                  .toString() +
-                                              ' \u00B0C'),
+                                          Text(
+                                            (hourly.hourlyWeather!.temperature2m![index + adjustHourlyByCurrentTime] * (isCelsius ? 1 : 9 / 5) + (isCelsius ? 0 : 32))
+                                              .toStringAsFixed(1) +
+                                            ' \u00B0' +
+                                            (isCelsius ? 'C' : 'F'),
+                                          ),
                                           SizedBox(height: 5),
                                           getWeatherIcon(hourly
                                               .hourlyWeather!
@@ -416,7 +437,6 @@ class _SearchedLocationScreenState extends State<SearchedLocationScreen> {
                                       return Column(
                                         mainAxisAlignment:
                                             MainAxisAlignment.spaceBetween,
-                                        // crossAxisAlignment: CrossAxisAlignment.,
                                         children: [
                                           Row(
                                             children: [
@@ -447,12 +467,12 @@ class _SearchedLocationScreenState extends State<SearchedLocationScreen> {
                                                     size: 20,
                                                     color: Colors.blue,
                                                   ),
-                                                  Text(daily
-                                                          .dailyWeather!
-                                                          .temperature2mMax![
-                                                              index]
-                                                          .toString() +
-                                                      ' \u00B0C'),
+                                                  Text(
+                                                    (daily.dailyWeather!.temperature2mMax![index] * (isCelsius ? 1 : 9 / 5) + (isCelsius ? 0 : 32))
+                                                      .toStringAsFixed(1) +
+                                                    ' \u00B0' +
+                                                    (isCelsius ? 'C' : 'F'),
+                                                  ),
                                                 ],
                                               ),
                                               Row(
@@ -463,12 +483,12 @@ class _SearchedLocationScreenState extends State<SearchedLocationScreen> {
                                                     size: 20,
                                                     color: Colors.red,
                                                   ),
-                                                  Text((daily
-                                                          .dailyWeather!
-                                                          .temperature2mMin![
-                                                              index]
-                                                          .toString() +
-                                                      ' \u00B0C')),
+                                                  Text(
+                                                    (daily.dailyWeather!.temperature2mMin![index] * (isCelsius ? 1 : 9 / 5) + (isCelsius ? 0 : 32))
+                                                      .toStringAsFixed(1) +
+                                                    ' \u00B0' +
+                                                    (isCelsius ? 'C' : 'F'),
+                                                  ),
                                                 ],
                                               ),
                                             ],
@@ -506,7 +526,6 @@ class _SearchedLocationScreenState extends State<SearchedLocationScreen> {
                                                             .dailyWeather!
                                                             .sunrise![index]
                                                             .minute),
-                                                    // style: TextStyle(fontSize: 20),
                                                   ),
                                                 ],
                                               ),
@@ -530,7 +549,6 @@ class _SearchedLocationScreenState extends State<SearchedLocationScreen> {
                                                         .sunset![index].hour,
                                                     daily.dailyWeather!
                                                         .sunset![index].minute),
-                                                // style: TextStyle(fontSize: 20),
                                               ),
                                             ],
                                           ),

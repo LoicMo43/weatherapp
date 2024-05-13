@@ -31,6 +31,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   bool locationservicestatus = false;
+  bool isCelsius = true;
   late Position position;
   int adjustHourlyByCurrentTime = 0;
   @override
@@ -61,27 +62,29 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             ..longitude = longitude;
           getCityName();
           getWeatherData();
-          Provider.of<hasPermissionProvider>(context, listen: false).hasPermission = true;
+          Provider.of<hasPermissionProvider>(context, listen: false)
+              .hasPermission = true;
         }),
         js.JsFunction.withThis((self, error) {
           print('Error getting location: $error');
-          Provider.of<hasPermissionProvider>(context, listen: false).hasPermission = false;
+          Provider.of<hasPermissionProvider>(context, listen: false)
+              .hasPermission = false;
         })
       ]);
     } else {
       var data = await Geolocator.isLocationServiceEnabled();
 
-        locationservicestatus = data;
+      locationservicestatus = data;
 
       Geolocator.getServiceStatusStream().listen((event) {
         if (event == geolocator.ServiceStatus.enabled) {
-
-            locationservicestatus = true;
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Localisation activé !')));
-
+          locationservicestatus = true;
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('Localisation activé !')));
         } else {
-            locationservicestatus = false;
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Activé votre localisation!')));
+          locationservicestatus = false;
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Activé votre localisation!')));
         }
       });
 
@@ -115,32 +118,33 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   }
 
   getLocation() async {
+    LocationPermission permission = await Geolocator.requestPermission();
+    if (permission == LocationPermission.whileInUse) {
+      position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
 
-   LocationPermission permission= await Geolocator.requestPermission();
-    if(permission==LocationPermission.whileInUse){
-    position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high);
+      Provider.of<CurrentLocationProvider>(context, listen: false).longitude =
+          position.longitude;
+      Provider.of<CurrentLocationProvider>(context, listen: false).latitude =
+          position.latitude;
+      print(position.longitude);
 
-    Provider.of<CurrentLocationProvider>(context, listen: false).longitude =
-        position.longitude;
-    Provider.of<CurrentLocationProvider>(context, listen: false).latitude =
-        position.latitude;
-print(position.longitude);
-
-    getCityName();
-    getWeatherData();
-    Provider.of<hasPermissionProvider>(context, listen: false).hasPermission=true;
-
-    }
-    else if(permission==LocationPermission.denied || permission==LocationPermission.deniedForever){
-      bool shouldShowRationale = await Permission.locationWhenInUse.shouldShowRequestRationale;
+      getCityName();
+      getWeatherData();
+      Provider.of<hasPermissionProvider>(context, listen: false).hasPermission =
+          true;
+    } else if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      bool shouldShowRationale =
+          await Permission.locationWhenInUse.shouldShowRequestRationale;
       if (!shouldShowRationale) {
         showLocationPermissionDialog();
       } else {
-        Provider.of<hasPermissionProvider>(context, listen: false).hasPermission=false;
+        Provider.of<hasPermissionProvider>(context, listen: false)
+            .hasPermission = false;
       }
-      Provider.of<hasPermissionProvider>(context, listen: false).hasPermission=false;
-
+      Provider.of<hasPermissionProvider>(context, listen: false).hasPermission =
+          false;
     }
   }
 
@@ -148,7 +152,7 @@ print(position.longitude);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Avtiver manuellement la localisation'),
+        title: Text('Activer manuellement la localisation'),
         content: Text('Merci'),
         actions: [
           TextButton(
@@ -175,8 +179,6 @@ print(position.longitude);
       }
     } catch (e) {
       print(e);
-      // ScaffoldMessenger.of(context)
-      //     .showSnackBar(SnackBar(content: Text('Error loading city $e')));
     }
   }
 
@@ -207,10 +209,7 @@ print(position.longitude);
         Provider.of<DailyWeatherProvider>(context, listen: false).dailyWeather =
             dailyWeather;
       } else {
-        // print(response.statusCode);
-        print('error');
-        // ScaffoldMessenger.of(context)
-        //     .showSnackBar(SnackBar(content: Text('Error loading weather')));
+        print('erreur');
       }
     } catch (e) {
       print('err' + e.toString());
@@ -226,10 +225,8 @@ print(position.longitude);
       }
       adjustHourlyByCurrentTime++;
     }
-    Provider.of<isLoadingProvider>(context,listen: false).isLoading=false;
-
+    Provider.of<isLoadingProvider>(context, listen: false).isLoading = false;
   }
-
 
   Icon getWeatherIcon(int weatherCode) {
     switch (weatherCode) {
@@ -325,7 +322,7 @@ print(position.longitude);
         return Icon(
           WeatherIcons.day_sunny,
           size: 26,
-        ); // Default icon for unknown weather code
+        );
     }
   }
 
@@ -397,193 +394,246 @@ print(position.longitude);
   @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.sizeOf(context).width;
-    // print('haspermission:' + hasPermission.toString());
-    // print('locationservicestatus:' + locationservicestatus.toString());
-    return  SafeArea(
+    return SafeArea(
       child: Scaffold(
-        appBar: AppBar(automaticallyImplyLeading :false,
-            title:
-                Text('Météo', style: TextStyle(fontWeight: FontWeight.bold)),
-            actions: [
-              IconButton(
-                icon: Icon(Icons.search),
-                onPressed: () {
-                  showSearch(context: context, delegate: SearchDelegateBar(context));
-                },
-              ),
-              Consumer<hasPermissionProvider>(
-                  builder: (context,hasPermission,child) {
-                  return IconButton(
-                    icon: hasPermission.hasPermission?Icon(Icons.location_on_rounded):Icon(Icons.location_off_rounded),
-                    onPressed: () {
-                     permissions();
-                    },
-                  );
-                }
-              ),
-            ],
-            backgroundColor: Colors.orangeAccent[200]),
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          title: Text('Météo', style: TextStyle(fontWeight: FontWeight.bold)),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.search),
+              onPressed: () {
+                showSearch(
+                    context: context, delegate: SearchDelegateBar(context));
+              },
+            ),
+            IconButton(
+              icon: Text(isCelsius ? '°C' : '°F'),
+              onPressed: () {
+                setState(() {
+                  isCelsius = !isCelsius;
+                });
+              },
+            ),
+            Consumer<hasPermissionProvider>(
+              builder: (context, hasPermission, child) {
+                return IconButton(
+                  icon: hasPermission.hasPermission
+                      ? Icon(Icons.location_on_rounded)
+                      : Icon(Icons.location_off_rounded),
+                  onPressed: () {
+                    permissions();
+                  },
+                );
+              },
+            ),
+          ],
+          backgroundColor: Colors.lightBlueAccent[200],
+        ),
         body: Consumer<hasPermissionProvider>(
-          builder: (context,hasPermission,child) {
-            return hasPermission.hasPermission==false?Center(child: Column(mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text('Rechercher une localisation',),
-              ],
-            )): Consumer<isLoadingProvider>(
-                builder: (context,isLoading,child) {
-                return isLoading.isLoading == true
-                    ? Center(child: const CircularProgressIndicator())
-                    :
-
-                SingleChildScrollView(
-                        child: Column(
-                        children: [
-                          SizedBox(
-                            height: 30,
-                          ),
-                          Consumer<CurrentLocationProvider>(
-                            builder: (context,locationprovider,child) {
+            builder: (context, hasPermission, child) {
+          return hasPermission.hasPermission == false
+              ? Center(
+                  child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Rechercher une localisation',
+                    ),
+                  ],
+                ))
+              : Consumer<isLoadingProvider>(
+                  builder: (context, isLoading, child) {
+                  return isLoading.isLoading == true
+                      ? Center(child: const CircularProgressIndicator())
+                      : SingleChildScrollView(
+                          child: Column(
+                          children: [
+                            SizedBox(
+                              height: 30,
+                            ),
+                            Consumer<CurrentLocationProvider>(
+                                builder: (context, locationprovider, child) {
                               return Container(
                                 width: 150,
-                                child: Text((locationprovider.location), maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,),
+                                child: Text(
+                                  (locationprovider.location),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               );
-                            }
-                          ),
-                          Consumer<CurrentWeatherProvider>(
-                              builder: (context,currentWeather,child) {
-                              return Text(
-                                  currentWeather.currentWeather!.temperature.toString() +
-                                      ' \u00B0C',
-                                  style:
-                                      TextStyle(fontSize: 30, fontWeight: FontWeight.bold));
-                            }
-                          ),
-                          Consumer<CurrentWeatherProvider>(
-                              builder: (context,currentWeather,child) {
-                              return getWeatherIcon(
-                                  currentWeather.currentWeather?.weathercode?.toInt() ?? 0);
-                            }
-                          ),
-                          SizedBox(
-                            height: 30,
-                          ),
-                          // Divider(),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                                child: Text('Météo par heure',
-                                    style: TextStyle(
-                                        fontSize: 20, fontWeight: FontWeight.bold)),
-                              ),
-                            ],
-                          ),
-                          Divider(),
-                          Row(
-                            children: [
-                              Container(
-                                width: screenWidth,
-                                height: 160,
-                                padding: EdgeInsets.all(8.0),
-                                child: ListView.builder(
-                                  itemCount: 24,
-                                  scrollDirection: Axis.horizontal,
-                                  itemBuilder: (context, index) {
-                                    return Card(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(25.0),
-                                        child: Center(
-                                          child: Consumer<HourlyWeatherProvider>(
-                                            builder: (context,hourly,child) {
+                            }),
+                            Consumer<CurrentWeatherProvider>(
+                              builder: (context, currentWeather, child) {
+                                double temperature = currentWeather
+                                    .currentWeather!.temperature!
+                                    .toDouble();
+                                if (!isCelsius) {
+                                  temperature = temperature * 9 / 5 + 32;
+                                }
+                                return Text(
+                                  temperature.toStringAsFixed(1) +
+                                      ' \u00B0' +
+                                      (isCelsius ? 'C' : 'F'),
+                                  style: TextStyle(
+                                      fontSize: 30,
+                                      fontWeight: FontWeight.bold),
+                                );
+                              },
+                            ),
+                            Consumer<CurrentWeatherProvider>(
+                                builder: (context, currentWeather, child) {
+                              return getWeatherIcon(currentWeather
+                                      .currentWeather?.weathercode
+                                      ?.toInt() ??
+                                  0);
+                            }),
+                            SizedBox(
+                              height: 30,
+                            ),
+                            // Divider(),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10.0),
+                                  child: Row(
+                                    children: [
+                                      Text(
+                                        'Météo actuelle -',
+                                        style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      SizedBox(
+                                          width:
+                                              2), // Add some spacing between the texts
+                                      Text(
+                                        DateTime.now().day.toString() +
+                                            '/' +
+                                            DateTime.now().month.toString() +
+                                            '/' +
+                                            DateTime.now().year.toString(),
+                                        style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Divider(),
+                            Row(
+                              children: [
+                                Container(
+                                  width: screenWidth,
+                                  height: 160,
+                                  padding: EdgeInsets.all(8.0),
+                                  child: ListView.builder(
+                                    itemCount: 24,
+                                    scrollDirection: Axis.horizontal,
+                                    itemBuilder: (context, index) {
+                                      return Card(
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(25.0),
+                                          child: Center(
+                                            child:
+                                                Consumer<HourlyWeatherProvider>(
+                                                    builder: (context, hourly,
+                                                        child) {
                                               return Column(
                                                 mainAxisAlignment:
-                                                    MainAxisAlignment.spaceBetween,
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.center,
                                                 children: [
-                                                  Text(hourly
-                                                          .hourlyWeather!
-                                                          .temperature2m![index +
-                                                              adjustHourlyByCurrentTime]
-                                                          .toString() +
-                                                      ' \u00B0C'),
+                                                  Consumer<CurrentWeatherProvider>(
+                                                    builder: (context, currentWeather, child) {
+                                                      double temperature = hourly.hourlyWeather!.temperature2m![index + adjustHourlyByCurrentTime].toDouble();
+                                                      if (!isCelsius) {
+                                                        temperature = temperature * 9 / 5 + 32;
+                                                      }
+                                                      return Text(
+                                                        temperature.toStringAsFixed(1) + ' \u00B0' + (isCelsius ? 'C' : 'F'),
+                                                      );
+                                                    },
+                                                  ),
                                                   SizedBox(height: 5),
-                                                  getWeatherIcon(hourly
-                                                      .hourlyWeather!
-                                                      .weathercode![
-                                                          index + adjustHourlyByCurrentTime]
-                                                      .toInt()),
+                                                  getWeatherIcon(hourly.hourlyWeather!.weathercode![index + adjustHourlyByCurrentTime].toInt()),
                                                   SizedBox(height: 5),
-                                                  Text(getFormattedHour(hourly
-                                                      .hourlyWeather!
-                                                      .time![
-                                                          index + adjustHourlyByCurrentTime]
-                                                      .hour)),
+                                                  Text(getFormattedHour(hourly.hourlyWeather!.time![index + adjustHourlyByCurrentTime].hour)),
                                                 ],
                                               );
-                                            }
+                                            }),
                                           ),
                                         ),
-                                      ),
-                                    );
-                                  },
+                                      );
+                                    },
+                                  ),
+                                )
+                              ],
+                            ),
+                            // Divider(),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10.0),
+                                  child: Text('Météo quotidienne',
+                                      style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold)),
                                 ),
-                              )
-                            ],
-                          ),
-                          // Divider(),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                                child: Text('Météo par jour',
-                                    style: TextStyle(
-                                        fontSize: 20, fontWeight: FontWeight.bold)),
-                              ),
-                            ],
-                          ),
-                          Divider(),
-                          Row(
-                            children: [
-                              Container(
-                                width: screenWidth,
-                                height: 230,
-                                padding: EdgeInsets.all(8.0),
-                                child: ListView.builder(
-                                  itemCount: 7,
-                                  scrollDirection: Axis.horizontal,
-                                  itemBuilder: (context, index) {
-                                    return Card(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(25.0),
-                                        child: Center(
-                                          child: Consumer<DailyWeatherProvider>(
-                                            builder: (context,daily,child) {
+                              ],
+                            ),
+                            Divider(),
+                            Row(
+                              children: [
+                                Container(
+                                  width: screenWidth,
+                                  height: 230,
+                                  padding: EdgeInsets.all(8.0),
+                                  child: ListView.builder(
+                                    itemCount: 7,
+                                    scrollDirection: Axis.horizontal,
+                                    itemBuilder: (context, index) {
+                                      return Card(
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(25.0),
+                                          child: Center(
+                                            child:
+                                                Consumer<DailyWeatherProvider>(
+                                                    builder: (context, daily,
+                                                        child) {
                                               return Column(
                                                 mainAxisAlignment:
-                                                    MainAxisAlignment.spaceBetween,
-                                                // crossAxisAlignment: CrossAxisAlignment.,
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
                                                 children: [
                                                   Row(
                                                     children: [
-                                                      getWeekDay(
-                                                          daily.dailyWeather!.time![index]),
+                                                      getWeekDay(daily
+                                                          .dailyWeather!
+                                                          .time![index]),
                                                       SizedBox(
                                                         width: 10,
                                                       ),
-                                                      Text(daily.dailyWeather!.time![index]
-                                                              .day
+                                                      Text(daily.dailyWeather!
+                                                              .time![index].day
                                                               .toString() +
                                                           '/' +
-                                                          daily.dailyWeather!.time![index]
+                                                          daily
+                                                              .dailyWeather!
+                                                              .time![index]
                                                               .month
                                                               .toString() +
                                                           '/' +
-                                                          daily.dailyWeather!.time![index]
-                                                              .year
+                                                          daily.dailyWeather!
+                                                              .time![index].year
                                                               .toString())
                                                     ],
                                                   ),
@@ -596,58 +646,78 @@ print(position.longitude);
                                                             size: 20,
                                                             color: Colors.blue,
                                                           ),
-                                                          Text(daily.dailyWeather!
-                                                                  .temperature2mMax![index]
-                                                                  .toString() +
-                                                              ' \u00B0C'),
+                                                          Consumer<CurrentWeatherProvider>(
+                                                            builder: (context, currentWeather, child) {
+                                                              double temperatureMax = daily.dailyWeather!.temperature2mMax![index].toDouble();
+                                                              if (!isCelsius) {
+                                                                temperatureMax = temperatureMax * 9 / 5 + 32;
+                                                              }
+                                                              return Text(
+                                                                temperatureMax.toStringAsFixed(1) + ' \u00B0' + (isCelsius ? 'C' : 'F'),
+                                                              );
+                                                            },
+                                                          ),
                                                         ],
                                                       ),
                                                       Row(
                                                         children: [
                                                           Icon(
-                                                            WeatherIcons
-                                                                .thermometer_exterior,
+                                                            WeatherIcons.thermometer_exterior,
                                                             size: 20,
                                                             color: Colors.red,
                                                           ),
-                                                          Text((daily.dailyWeather!
-                                                                  .temperature2mMin![index]
-                                                                  .toString() +
-                                                              ' \u00B0C')),
+                                                          Consumer<CurrentWeatherProvider>(
+                                                            builder: (context, currentWeather, child) {
+                                                              double temperatureMin = daily.dailyWeather!.temperature2mMin![index].toDouble();
+                                                              if (!isCelsius) {
+                                                                temperatureMin = temperatureMin * 9 / 5 + 32;
+                                                              }
+                                                              return Text(
+                                                                temperatureMin.toStringAsFixed(1) + ' \u00B0' + (isCelsius ? 'C' : 'F'),
+                                                              );
+                                                            },
+                                                          ),
                                                         ],
                                                       ),
-                                                    ],
-                                                  ),
+                                                    ],),
                                                   SizedBox(
                                                     height: 5,
                                                   ),
                                                   getWeatherIcon(daily
-                                                      .dailyWeather!.weathercode![index]
+                                                      .dailyWeather!
+                                                      .weathercode![index]
                                                       .toInt()),
                                                   SizedBox(
                                                     height: 5,
                                                   ),
                                                   Row(
                                                     mainAxisAlignment:
-                                                        MainAxisAlignment.spaceBetween,
+                                                        MainAxisAlignment
+                                                            .spaceBetween,
                                                     children: [
                                                       Row(
                                                         children: [
                                                           Icon(
-                                                            WeatherIcons.sunrise,
+                                                            WeatherIcons
+                                                                .sunrise,
                                                             size: 20,
-                                                            color: Colors.orange,
+                                                            color:
+                                                                Colors.orange,
                                                           ),
                                                           SizedBox(
                                                             width: 10,
                                                           ),
                                                           Text(
                                                             getFormattedHour(
-                                                                daily.dailyWeather!
-                                                                    .sunrise![index].hour,
                                                                 daily
                                                                     .dailyWeather!
-                                                                    .sunrise![index]
+                                                                    .sunrise![
+                                                                        index]
+                                                                    .hour,
+                                                                daily
+                                                                    .dailyWeather!
+                                                                    .sunrise![
+                                                                        index]
                                                                     .minute),
                                                             // style: TextStyle(fontSize: 20),
                                                           ),
@@ -657,117 +727,124 @@ print(position.longitude);
                                                   ),
                                                   Row(
                                                     mainAxisAlignment:
-                                                        MainAxisAlignment.spaceBetween,
+                                                        MainAxisAlignment
+                                                            .spaceBetween,
                                                     children: [
                                                       Icon(
                                                         WeatherIcons.sunset,
                                                         size: 20,
-                                                        color: Colors.deepPurple,
+                                                        color:
+                                                            Colors.deepPurple,
                                                       ),
                                                       SizedBox(
                                                         width: 10,
                                                       ),
                                                       Text(
                                                         getFormattedHour(
-                                                            daily.dailyWeather!
-                                                                .sunset![index].hour,
-                                                            daily.dailyWeather!
-                                                                .sunset![index].minute),
+                                                            daily
+                                                                .dailyWeather!
+                                                                .sunset![index]
+                                                                .hour,
+                                                            daily
+                                                                .dailyWeather!
+                                                                .sunset![index]
+                                                                .minute),
                                                         // style: TextStyle(fontSize: 20),
                                                       ),
                                                     ],
                                                   ),
                                                 ],
                                               );
-                                            }
+                                            }),
                                           ),
                                         ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              )
-                            ],
-                          ),
-                          // Divider(),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                                child: Text('Détails',
-                                    style: TextStyle(
-                                        fontSize: 20, fontWeight: FontWeight.bold)),
-                              ),
-                            ],
-                          ),
-                          Divider(),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                            child: Consumer<CurrentWeatherProvider>(
-                              builder: (context,currentWeather,child) {
-                                return Consumer<CurrentLocationProvider>(
-                                  builder: (context,locationprovider,child) {
-                                    return Column(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text('Vitesse du vent:' +
-                                              currentWeather.currentWeather!.windspeed
-                                                  .toString() +
-                                              ' Km/h'),
-                                          SizedBox(
-                                            height: 5,
-                                          ),
-                                          Row(
-                                            children: [
-                                              Text('Jour / Nuit :'),
-                                              currentWeather.currentWeather!.isDay == 1
-                                                  ? Icon(WeatherIcons.day_sunny)
-                                                  : Icon(WeatherIcons.night_clear)
-                                            ],
-                                          ),
-                                          // ,Text('Time')
-                                          SizedBox(
-                                            height: 5,
-                                          ),
-                                          Text('Latitude:' +
-                                              locationprovider.latitude.toString()),
-                                          SizedBox(
-                                            height: 5,
-                                          ),
-                                          Text('Longitude:' +
-                                              locationprovider.longitude.toString()),
-                                          SizedBox(
-                                            height: 20,
-                                          )
-                                        ]);
-                                  }
-                                );
-                              }
+                                      );
+                                    },
+                                  ),
+                                )
+                              ],
                             ),
-                          ),
-                        ],
-                      ));
-              }
-            );
-          }
-        ),
+                            // Divider(),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10.0),
+                                  child: Text('Détails',
+                                      style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold)),
+                                ),
+                              ],
+                            ),
+                            Divider(),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 10.0),
+                              child: Consumer<CurrentWeatherProvider>(
+                                  builder: (context, currentWeather, child) {
+                                return Consumer<CurrentLocationProvider>(
+                                    builder:
+                                        (context, locationprovider, child) {
+                                  return Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Vitesse du vent:' +
+                                            currentWeather
+                                                .currentWeather!.windspeed
+                                                .toString() +
+                                            ' Km/h'),
+                                        SizedBox(
+                                          height: 5,
+                                        ),
+                                        Row(
+                                          children: [
+                                            Text('Jour / Nuit :'),
+                                            currentWeather.currentWeather!
+                                                        .isDay ==
+                                                    1
+                                                ? Icon(WeatherIcons.day_sunny)
+                                                : Icon(WeatherIcons.night_clear)
+                                          ],
+                                        ),
+                                        // ,Text('Time')
+                                        SizedBox(
+                                          height: 5,
+                                        ),
+                                        Text('Latitude:' +
+                                            locationprovider.latitude
+                                                .toString()),
+                                        SizedBox(
+                                          height: 5,
+                                        ),
+                                        Text('Longitude:' +
+                                            locationprovider.longitude
+                                                .toString()),
+                                        SizedBox(
+                                          height: 20,
+                                        )
+                                      ]);
+                                });
+                              }),
+                            ),
+                          ],
+                        ));
+                });
+        }),
       ),
     );
   }
 }
 
-
-
-
-class SearchDelegateBar extends SearchDelegate<String>{
+class SearchDelegateBar extends SearchDelegate<String> {
   BuildContext? context;
-SearchDelegateBar(BuildContext context1){
-  context=context1;
-}
-
-
+  SearchDelegateBar(BuildContext context1) {
+    context = context1;
+  }
 
   Future<LocationData> _searchLocation(String query1) async {
     final String apiUrl =
@@ -782,13 +859,11 @@ SearchDelegateBar(BuildContext context1){
       List<double> latitude = [];
       List<double> longitude = [];
       for (var item in data) {
-            locations.add( item['display_name'].toString());
-            latitude.add( double.parse(item['lat']));
-            longitude.add( double.parse(item['lon']));
-            print(item['display_name']);
-
-        }
-
+        locations.add(item['display_name'].toString());
+        latitude.add(double.parse(item['lat']));
+        longitude.add(double.parse(item['lon']));
+        print(item['display_name']);
+      }
 
       return LocationData(
         locations: locations,
@@ -798,15 +873,10 @@ SearchDelegateBar(BuildContext context1){
     } else {
       return LocationData(locations: [], latitude: [], longitude: []);
     }
-    }
-
-
-
-
+  }
 
   @override
   Widget buildSuggestions(BuildContext context) {
-
     return FutureBuilder<LocationData>(
       future: _searchLocation(query),
       builder: (context, snapshot) {
@@ -843,8 +913,8 @@ SearchDelegateBar(BuildContext context1){
                       },
                       child: ListTile(
                         title: Text(locations[index]),
-                        subtitle:
-                        Text('lat:${latitude[index]}, long:${longitude[index]}'),
+                        subtitle: Text(
+                            'lat:${latitude[index]}, long:${longitude[index]}'),
                       ),
                     ),
                     Divider()
@@ -860,9 +930,6 @@ SearchDelegateBar(BuildContext context1){
       },
     );
   }
-
-
-
 
   @override
   Widget buildResults(BuildContext context) {
@@ -902,8 +969,8 @@ SearchDelegateBar(BuildContext context1){
                       },
                       child: ListTile(
                         title: Text(locations[index]),
-                        subtitle:
-                        Text('lat:${latitude[index]}, long:${longitude[index]}'),
+                        subtitle: Text(
+                            'lat:${latitude[index]}, long:${longitude[index]}'),
                       ),
                     ),
                     Divider()
@@ -920,9 +987,6 @@ SearchDelegateBar(BuildContext context1){
     );
   }
 
-
-
-
   @override
   Widget? buildLeading(BuildContext context) {
     return IconButton(
@@ -932,6 +996,7 @@ SearchDelegateBar(BuildContext context1){
       },
     );
   }
+
   @override
   List<Widget>? buildActions(BuildContext context) {
     return [
@@ -944,7 +1009,6 @@ SearchDelegateBar(BuildContext context1){
     ];
   }
 }
-
 
 class LocationData {
   List<String> locations;
