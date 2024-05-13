@@ -55,5 +55,22 @@
       });
     });
   </script>
+  <script>
+    function getLocation(successCallback, errorCallback) {
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+          var coords = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          };
+          successCallback(coords);
+        }, function(error) {
+          errorCallback(error.message);
+        });
+      } else {
+        errorCallback('Geolocation is not supported by this browser.');
+      }
+    }
+  </script>
 </body>
 </html>

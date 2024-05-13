@@ -21,6 +21,8 @@ import '../providers/currentweatherprovider.dart';
 import '../providers/dailyweatherprovider.dart';
 import '../providers/hourlyweatherprovider.dart';
 import '../providers/currentlocationprovider.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:js' as js;
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -47,32 +49,33 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
   }
 
+  void permissions() async {
+    Provider.of<isLoadingProvider>(context, listen: false).isLoading = true;
 
-
-  permissions() async {
-
-    Provider.of<isLoadingProvider>(context,listen: false).isLoading=true;
-
+    if (kIsWeb) {
+      js.context.callMethod('getLocation', [
+        js.JsFunction.withThis((self, coords) {
+          double latitude = js.JsObject.fromBrowserObject(coords)['latitude'];
+          double longitude = js.JsObject.fromBrowserObject(coords)['longitude'];
+          print('Latitude: $latitude, Longitude: $longitude');
+          Provider.of<CurrentLocationProvider>(context, listen: false)
+            ..latitude = latitude
+            ..longitude = longitude;
+          getCityName();
+          getWeatherData();
+          Provider.of<hasPermissionProvider>(context, listen: false).hasPermission = true;
+        }),
+        js.JsFunction.withThis((self, error) {
+          print('Error getting location: $error');
+          Provider.of<hasPermissionProvider>(context, listen: false).hasPermission = false;
+        })
+      ]);
+    } else {
       var data = await Geolocator.isLocationServiceEnabled();
-
-        locationservicestatus = data;
-
-      Geolocator.getServiceStatusStream().listen((event) {
-        if (event == geolocator.ServiceStatus.enabled) {
-
-            locationservicestatus = true;
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Location enabled')));
-
-        } else {
-            locationservicestatus = false;
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Enable your location!')));
-        }
-      });
-
+      locationservicestatus = data;
       if (locationservicestatus) {
-       await getLocation();
-      }
-      else {
+        await getLocation();
+      } else {
         showDialog(
           context: context,
           builder: (context) {
@@ -95,9 +98,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           },
         );
       }
-
-
-
+    }
+    Provider.of<isLoadingProvider>(context, listen: false).isLoading = false;
   }
 
   getLocation() async {
@@ -165,8 +167,6 @@ print(position.longitude);
       //     .showSnackBar(SnackBar(content: Text('Error loading city $e')));
     }
   }
-
-
 
   getWeatherData() async {
     final apiUrl =
