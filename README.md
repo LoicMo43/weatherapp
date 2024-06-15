@@ -4,4 +4,4 @@
 
 `flutter run`
 
-Choisir `[2]: Chrome (chrome)`
+Choisir `[1]: Chrome (chrome)`
