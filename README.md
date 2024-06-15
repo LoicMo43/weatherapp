@@ -3,3 +3,5 @@
 `flutter pub get`
 
 `flutter run`
+
+Choisir `[2]: Chrome (chrome)`
